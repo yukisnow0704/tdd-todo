@@ -1,0 +1,30 @@
+services:
+  mysql:
+    image: 'mysql:8.0'
+    environment:
+      - MYSQL_ROOT_PASSWORD=my-secret-pw
+      - MYSQL_DATABASE=todo_app
+    ports:
+      - "${DOCKER_HOST_MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  web:
+    tty: true
+    build: './php84'
+    ports:
+      - "${DOCKER_HOST_WEB_PORT:-8000}:80"
+    volumes:
+      - ".:/var/www/html/todo-app/"
+    depends_on:
+      - mysql
+
+  adminer:
+    image: adminer:latest
+    depends_on:
+      - mysql
+    ports:
+      - "${DOCKER_HOST_ADMINER_PORT:-8081}:8080"
+
+volumes:
+  mysql_data:
