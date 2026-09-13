@@ -1,0 +1,30 @@
+FROM php:8.4-apache
+
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/todo-app/public
+
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+RUN apt-get update \
+    && apt-get -y install unzip libicu-dev libzip-dev libsqlite3-dev \
+    && docker-php-ext-install pdo_sqlite intl zip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN a2enmod rewrite
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html/todo-app
+
+COPY . .
+
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+RUN mkdir -p storage/framework/{sessions,views,cache/data} storage/logs database \
+    && touch database/database.sqlite \
+    && chown -R www-data:www-data storage bootstrap/cache database
+
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
